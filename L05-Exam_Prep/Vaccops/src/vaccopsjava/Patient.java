@@ -1,3 +1,5 @@
+package vaccopsjava;
+
 public class Patient {
 
     public String name;

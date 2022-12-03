@@ -1,3 +1,5 @@
+package vaccopsjava;
+
 import java.util.Collection;
 
 public interface IVaccOps {
