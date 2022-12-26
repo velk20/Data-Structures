@@ -8,10 +8,12 @@ import java.util.stream.Collectors;
 
 public class AirlinesManagerImpl implements AirlinesManager {
     private Map<String, Airline> airlineMap;
+    private Map<String, Flight> flightMap;
     private Map<String, List<Flight>> airlineFlights;
 
     public AirlinesManagerImpl() {
         this.airlineMap = new HashMap<>();
+        this.flightMap = new HashMap<>();
         this.airlineFlights = new HashMap<>();
     }
 
@@ -36,7 +38,7 @@ public class AirlinesManagerImpl implements AirlinesManager {
 
         flight.setAirline(airline);
         this.airlineFlights.get(airline.getId()).add(flight);
-
+        this.flightMap.put(flight.getId(), flight);
 
     }
 
@@ -47,10 +49,7 @@ public class AirlinesManagerImpl implements AirlinesManager {
 
     @Override
     public boolean contains(Flight flight) {
-        return this.airlineFlights.values()
-                .stream()
-                .flatMap(Collection::stream)
-                .anyMatch(f -> f.getId().equals(flight.getId()));
+        return this.flightMap.containsKey(flight.getId());
     }
 
     @Override
@@ -59,16 +58,16 @@ public class AirlinesManagerImpl implements AirlinesManager {
             throw new IllegalArgumentException();
         }
 
-        this.airlineFlights.remove(airline.getId());
         this.airlineMap.remove(airline.getId());
+        List<Flight> removeFlights = this.airlineFlights.remove(airline.getId());
+        for (Flight removeFlight : removeFlights) {
+            this.flightMap.remove(removeFlight.getId());
+        }
     }
 
     @Override
     public Iterable<Flight> getAllFlights() {
-        return this.airlineFlights.values()
-                .stream()
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+        return this.flightMap.values();
     }
 
     @Override
@@ -87,18 +86,16 @@ public class AirlinesManagerImpl implements AirlinesManager {
 
     @Override
     public Iterable<Flight> getCompletedFlights() {
-        return this.airlineFlights.values()
+        return this.flightMap.values()
                 .stream()
-                .flatMap(Collection::stream)
                 .filter(Flight::isCompleted)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Iterable<Flight> getFlightsOrderedByNumberThenByCompletion() {
-        return this.airlineFlights.values()
+        return this.flightMap.values()
                 .stream()
-                .flatMap(Collection::stream)
                 .sorted((f1,f2)->{
                     if (!f1.isCompleted()) {
                         return -1;
@@ -119,21 +116,15 @@ public class AirlinesManagerImpl implements AirlinesManager {
                 .sorted((a1,a2)->{
                     double a1Rating = a1.getRating();
                     double a2Rating = a2.getRating();
-
                     if (a1Rating == a2Rating) {
                         int a1Size = this.airlineFlights.get(a1.getId()).size();
                         int a2Size = this.airlineFlights.get(a2.getId()).size();
-
                         if (a1Size == a2Size) {
                             return a1.getName().compareTo(a2.getName());
                         }
-
                         return Integer.compare(a2Size, a1Size);
                     }
-
-
                     return Double.compare(a2Rating, a1Rating);
-
                 }).collect(Collectors.toList());
     }
 
@@ -141,11 +132,11 @@ public class AirlinesManagerImpl implements AirlinesManager {
     public Iterable<Airline> getAirlinesWithFlightsFromOriginToDestination(String origin, String destination) {
         return this.airlineMap.values()
                 .stream()
-                .filter(a->{
-                    List<Flight> flights = this.airlineFlights.get(a.getId());
-                    return flights.stream()
-                            .filter(f -> !f.isCompleted())
-                            .anyMatch(f -> f.getOrigin().equals(origin) && f.getDestination().equals(destination));
-                }).collect(Collectors.toList());
+                .filter(
+                        a-> this.airlineFlights.get(a.getId())
+                                .stream()
+                                .filter(f -> !f.isCompleted())
+                                .anyMatch(f -> f.getOrigin().equals(origin) && f.getDestination().equals(destination)))
+                .collect(Collectors.toList());
     }
 }
